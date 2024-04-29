@@ -93,7 +93,7 @@ col3.metric(label="__机器电费/天($)__", value=f"{hosting_fee_per_day:.3f}")
 chgs = (-0.2, -0.1, 0, 0.1, 0.2)
 chgs_str = [f'({v:.0%})'if v != 0 else '' for v in chgs]
 list_revenue_per_day_usd = [revenue_per_day_usd * (1+f) for f in chgs]
-list_breakeven_hosting_unit_price = [rev * hash_rate / power_consumption_per_day for rev in list_revenue_per_day_usd]
+list_breakeven_hosting_unit_price = [rev * hash_rate / power_consumption_per_day if power_consumption_per_day!=0 else 0 for rev in list_revenue_per_day_usd]
 
 st.markdown('---')
 st.subheader('关机电价')
