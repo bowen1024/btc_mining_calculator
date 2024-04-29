@@ -85,9 +85,9 @@ else:
 
 st.markdown('---')
 col1, col2, col3 = st.columns(3)
-col1.metric(label="__收益电费比__", value=f"{hosting_fee_ratio:.2f}")
-col2.metric(label="__机器收益/天($)__", value=f"{machine_revenue_per_day_usd:.3f}")
-col3.metric(label="__机器电费/天($)__", value=f"{hosting_fee_per_day:.3f}")
+col1.metric(label="__电费收益比__", value=f"{hosting_fee_ratio:.2f}")
+col2.metric(label="__矿机收益/天($)__", value=f"{machine_revenue_per_day_usd:.3f}")
+col3.metric(label="__矿机电费/天($)__", value=f"{hosting_fee_per_day:.3f}")
 
 # Break-even hosting price calculation
 chgs = (-0.2, -0.1, 0, 0.1, 0.2)
