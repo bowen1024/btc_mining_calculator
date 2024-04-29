@@ -20,9 +20,9 @@ update_value('block_difficulty', get_block_difficulty, timedelta(days=1))
 st.header('挖矿收益计算', divider='rainbow')
 
 # User inputs
-btc_price = st.number_input('比特币价格（$）', value=st.session_state['btc_price'])
-block_fee = st.number_input('平均矿工费24h（BTC）', value=st.session_state['avg_block_fee_24h'])
-block_difficulty = st.number_input('区块难度 (T)', value=st.session_state['block_difficulty'])
+btc_price = st.number_input('比特币价格 ($)',value=st.session_state['btc_price'], min_value=0)
+block_fee = st.number_input('平均矿工费24h (BTC)', value=st.session_state['avg_block_fee_24h'], min_value=0., format='%0.3f')
+block_difficulty = st.number_input('区块难度 (T)', value=st.session_state['block_difficulty'], min_value=0.)
 
 # Number of block per day, 1 day is of 86400 seconds, 10 minutes per block
 Blocks_Per_Day = 86400 / 600
@@ -60,7 +60,7 @@ hash_rate = st.number_input('哈希率 (T)', value=hash_rate)
 power = st.number_input('功率 (W)', value=power)
 
 # hosting unit price, in usd
-hosting_unit_price = st.number_input('电费/度 ($)', value=0.07)
+hosting_unit_price = st.number_input('电费/度 ($)', value=0.068, min_value=0., format='%0.3f')
 
 # Actual electricity cost factor
 electricity_cost_factor = st.number_input('实际电费系数', value=1.05)
