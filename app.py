@@ -21,7 +21,7 @@ st.header('挖矿收益计算', divider='rainbow')
 
 # User inputs
 btc_price = st.number_input('比特币价格 ($)',value=st.session_state['btc_price'], min_value=0)
-block_fee = st.number_input('平均矿工费24h (BTC)', value=st.session_state['avg_block_fee_24h'], min_value=0., format='%0.3f')
+block_fee = st.number_input('24h平均矿工费 (BTC)', value=st.session_state['avg_block_fee_24h'], min_value=0., format='%0.3f')
 block_difficulty = st.number_input('区块难度 (T)', value=st.session_state['block_difficulty'], min_value=0.)
 
 # Number of block per day, 1 day is of 86400 seconds, 10 minutes per block
@@ -66,20 +66,40 @@ hosting_unit_price = st.number_input('电费/度 ($)', value=0.068, min_value=0.
 electricity_cost_factor = st.number_input('实际电费系数', value=1.05)
 
 # Revenue for machine per day, in USD
-revenue_machine_per_day_usd = revenue_per_day_usd * hash_rate
+machine_revenue_per_day_usd = revenue_per_day_usd * hash_rate
+
+# power consumption per day, in KWh
+power_consumption_per_day = power / 1000 * 24 * electricity_cost_factor
 
 # Hosting fee for machine per day, in USD
-hosting_fee_per_day = power / 1000 * 24 * hosting_unit_price * electricity_cost_factor
+hosting_fee_per_day = power_consumption_per_day * hosting_unit_price
 
 # Hosting Fee Ratio
-if revenue_machine_per_day_usd != 0:
-    hosting_fee_ratio = hosting_fee_per_day / revenue_machine_per_day_usd
+if machine_revenue_per_day_usd != 0:
+    hosting_fee_ratio = hosting_fee_per_day / machine_revenue_per_day_usd
 else:
     hosting_fee_ratio = 0
 
 st.markdown('---')
 col1, col2, col3 = st.columns(3)
-col1.metric(label="__机器收益/天($)__", value=f"{revenue_machine_per_day_usd:.4f}")
-col2.metric(label="__机器电费/天($)__", value=f"{hosting_fee_per_day:.4f}")
-col3.metric(label="__收益电费比__", value=f"{hosting_fee_ratio:.2f}")
+col1.metric(label="__收益电费比__", value=f"{hosting_fee_ratio:.2f}")
+col2.metric(label="__机器收益/天($)__", value=f"{machine_revenue_per_day_usd:.4f}")
+col3.metric(label="__机器电费/天($)__", value=f"{hosting_fee_per_day:.4f}")
+
+# Break-even hosting price calculation
+chgs = (-0.2, -0.1, 0, 0.1, 0.2)
+chgs_str = [f'({v:.0%})'if v != 0 else '' for v in chgs]
+list_revenue_per_day_usd = [revenue_per_day_usd * (1+f) for f in chgs]
+list_breakeven_hosting_unit_price = [rev * hash_rate / power_consumption_per_day for rev in list_revenue_per_day_usd]
+
 st.markdown('---')
+st.subheader('关机电价')
+st.markdown('\n')
+fx_usd_rmb = st.number_input('美元人民币汇率', value=7.25)
+st.markdown('\n')
+col1 = [f"{v * fx_usd_rmb:.4f} {suffix}"for v, suffix in zip(list_revenue_per_day_usd,chgs_str)]
+col2 = [f"{v:.4f} {suffix}"for v, suffix in zip(list_revenue_per_day_usd,chgs_str)]
+col3 = [f"{v:.3f}" for v in list_breakeven_hosting_unit_price]
+df = pd.DataFrame([col1, col2, col3], index=['每T收益(RMB)','每T收益($)','关机电价($)']).T
+
+st.dataframe(df, use_container_width=True, hide_index=True)
