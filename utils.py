@@ -24,13 +24,27 @@ def fetch_json_data(url):
 
 
 def get_btc_price():
-    data = fetch_json_data('https://mempool.space/api/v1/prices')
-    return data.get('USD', 0)
+    try:
+        data = fetch_json_data('https://mempool.space/api/v1/prices')
+        return data.get('USD', 65_000)
+    except:
+        return 65_000
 
 def get_avg_block_fee_24h():
-    data = fetch_json_data('https://mempool.space/api/v1/mining/blocks/fees/24h')
-    return sum([d['avgFees'] for d in data]) / len(data) / 1E8
+    try:
+        data = fetch_json_data('https://mempool.space/api/v1/mining/blocks/fees/24h')
+        return sum([d['avgFees'] for d in data]) / len(data) / 1E8
+    except:
+        return 0
 
 def get_block_difficulty():
-    return fetch_json_data('https://mempool.space/api/v1/mining/difficulty-adjustments/1m')[-1][2] / 1E12
+    try:
+        return fetch_json_data('https://mempool.space/api/v1/mining/difficulty-adjustments/1m')[-1][2] / 1E12
+    except:
+        return 90
 
+def get_usd_rmb():
+    try:
+        return fetch_json_data('https://open.er-api.com/v6/latest/USD').get('rates').get('CNY')
+    except:
+        return 7

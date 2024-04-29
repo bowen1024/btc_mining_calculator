@@ -2,7 +2,7 @@ import pandas as pd
 import streamlit as st
 from datetime import datetime, timedelta
 
-from utils import get_btc_price, get_block_difficulty, get_avg_block_fee_24h
+from utils import get_btc_price, get_block_difficulty, get_avg_block_fee_24h, get_usd_rmb
 
 def update_value(key, update_function, interval):
     if key not in st.session_state or 'last_update_' + key not in st.session_state:
@@ -16,13 +16,16 @@ def update_value(key, update_function, interval):
 update_value('btc_price', get_btc_price, timedelta(hours=1))
 update_value('avg_block_fee_24h', get_avg_block_fee_24h, timedelta(days=1))
 update_value('block_difficulty', get_block_difficulty, timedelta(days=1))
+update_value('usd_rmb', get_usd_rmb, timedelta(days=1))
 
 st.header('挖矿收益计算', divider='rainbow')
 
 # User inputs
-btc_price = st.number_input('比特币价格 ($)',value=st.session_state['btc_price'], min_value=0)
-block_fee = st.number_input('24h平均矿工费 (BTC)', value=st.session_state['avg_block_fee_24h'], min_value=0., format='%0.3f')
-block_difficulty = st.number_input('区块难度 (T)', value=st.session_state['block_difficulty'], min_value=0.)
+btc_price = st.number_input('比特币价格 ($)',value=st.session_state['btc_price'], min_value=0, step=1_000)
+block_fee = st.number_input('24h平均矿工费 (BTC)', value=st.session_state['avg_block_fee_24h'],
+                            min_value=0., format='%0.3f', step=0.1)
+block_difficulty = st.number_input('区块难度 (T)', value=st.session_state['block_difficulty'],
+                                   min_value=0., step=1.)
 
 # Number of block per day, 1 day is of 86400 seconds, 10 minutes per block
 Blocks_Per_Day = 86400 / 600
@@ -39,7 +42,7 @@ revenue_per_day_usd = revenue_per_day_btc * btc_price
 st.markdown('---')
 col1, col2, col3 = st.columns(3)
 col1.metric(label='__每T收益/天(BTC)__', value=f'{revenue_per_day_btc:.8f}')
-col2.metric(label='__每T收益/天($)__', value=f'{revenue_per_day_usd:.4f}')
+col2.metric(label='__每T收益/天($)__', value=f'{revenue_per_day_usd:.3f}')
 st.markdown('---')
 
 # Mining model selection
@@ -56,11 +59,11 @@ else:
     hash_rate = 0
     power = 0
 
-hash_rate = st.number_input('哈希率 (T)', value=hash_rate)
-power = st.number_input('功率 (W)', value=power)
+hash_rate = st.number_input('哈希率 (T)', value=hash_rate, step=10)
+power = st.number_input('功率 (W)', value=power, step=50)
 
 # hosting unit price, in usd
-hosting_unit_price = st.number_input('电费/度 ($)', value=0.068, min_value=0., format='%0.3f')
+hosting_unit_price = st.number_input('电费/度 ($)', value=0.068, min_value=0., step=0.001, format='%0.3f')
 
 # Actual electricity cost factor
 electricity_cost_factor = st.number_input('实际电费系数', value=1.05)
@@ -83,8 +86,8 @@ else:
 st.markdown('---')
 col1, col2, col3 = st.columns(3)
 col1.metric(label="__收益电费比__", value=f"{hosting_fee_ratio:.2f}")
-col2.metric(label="__机器收益/天($)__", value=f"{machine_revenue_per_day_usd:.4f}")
-col3.metric(label="__机器电费/天($)__", value=f"{hosting_fee_per_day:.4f}")
+col2.metric(label="__机器收益/天($)__", value=f"{machine_revenue_per_day_usd:.3f}")
+col3.metric(label="__机器电费/天($)__", value=f"{hosting_fee_per_day:.3f}")
 
 # Break-even hosting price calculation
 chgs = (-0.2, -0.1, 0, 0.1, 0.2)
@@ -95,10 +98,10 @@ list_breakeven_hosting_unit_price = [rev * hash_rate / power_consumption_per_day
 st.markdown('---')
 st.subheader('关机电价')
 st.markdown('\n')
-fx_usd_rmb = st.number_input('美元人民币汇率', value=7.25)
+fx_usd_rmb = st.number_input('美元人民币汇率', value=st.session_state['usd_rmb'], min_value=0., step=0.1, format='%0.2f')
 st.markdown('\n')
-col1 = [f"{v * fx_usd_rmb:.4f} {suffix}"for v, suffix in zip(list_revenue_per_day_usd,chgs_str)]
-col2 = [f"{v:.4f} {suffix}"for v, suffix in zip(list_revenue_per_day_usd,chgs_str)]
+col1 = [f"{v * fx_usd_rmb:.3f} {suffix}"for v, suffix in zip(list_revenue_per_day_usd,chgs_str)]
+col2 = [f"{v:.3f} {suffix}"for v, suffix in zip(list_revenue_per_day_usd,chgs_str)]
 col3 = [f"{v:.3f}" for v in list_breakeven_hosting_unit_price]
 df = pd.DataFrame([col1, col2, col3], index=['每T收益(RMB)','每T收益($)','关机电价($)']).T
 
