@@ -2,7 +2,7 @@ import pandas as pd
 import streamlit as st
 from datetime import datetime, timedelta
 
-from utils import get_btc_price, get_block_difficulty, get_avg_block_fee_24h, get_usd_rmb
+from utils import get_btc_price, get_block_difficulty, get_avg_block_fee_24h, get_usd_rmb, get_usd_kzt
 
 def update_value(key, update_function, interval):
     if key not in st.session_state or 'last_update_' + key not in st.session_state:
@@ -17,6 +17,7 @@ update_value('btc_price', get_btc_price, timedelta(hours=1))
 update_value('avg_block_fee_24h', get_avg_block_fee_24h, timedelta(days=1))
 update_value('block_difficulty', get_block_difficulty, timedelta(days=1))
 update_value('usd_rmb', get_usd_rmb, timedelta(days=1))
+update_value('usd_kzt', get_usd_kzt, timedelta(days=1))
 
 st.header('挖矿收益计算', divider='rainbow')
 
@@ -62,11 +63,17 @@ else:
 hash_rate = st.number_input('哈希率 (T)', value=hash_rate, step=10)
 power = st.number_input('功率 (W)', value=power, step=50)
 
+st.markdown('---')
+
 # hosting unit price, in usd
 hosting_unit_price = st.number_input('电费/度 ($)', value=0.068, min_value=0., step=0.001, format='%0.3f')
 
 # Actual electricity cost factor
 electricity_cost_factor = st.number_input('实际电费系数', value=1.05)
+
+# Mining tax
+mining_tax = st.number_input('挖矿税(坚戈)', value=2, step=1, min_value=0)
+usd_kzr = st.number_input('美金坚戈汇率', value=st.session_state.usd_kzt, step=10., min_value=0.)
 
 # Revenue for machine per day, in USD
 machine_revenue_per_day_usd = revenue_per_day_usd * hash_rate
@@ -74,26 +81,35 @@ machine_revenue_per_day_usd = revenue_per_day_usd * hash_rate
 # power consumption per day, in KWh
 power_consumption_per_day = power / 1000 * 24 * electricity_cost_factor
 
+# mining tax per day, in USD
+mining_tax_per_day = power_consumption_per_day * mining_tax / usd_kzr
+
 # Hosting fee for machine per day, in USD
 hosting_fee_per_day = power_consumption_per_day * hosting_unit_price
+
+# Hosting fee (plus tax) for machine per day, in USD
+hosting_fee_per_day_plus_tax = hosting_fee_per_day + mining_tax_per_day
 
 # Hosting Fee Ratio
 if machine_revenue_per_day_usd != 0:
     hosting_fee_ratio = hosting_fee_per_day / machine_revenue_per_day_usd
+    hosting_fee_ratio_plus_tax = hosting_fee_per_day_plus_tax / machine_revenue_per_day_usd
 else:
     hosting_fee_ratio = 0
+    hosting_fee_ratio_plus_tax= 0
 
 st.markdown('---')
 col1, col2, col3 = st.columns(3)
-col1.metric(label="__电费收益比__", value=f"{hosting_fee_ratio:.2f}")
+col1.metric(label="__电费收益比__", value=f"{hosting_fee_ratio:.2f}", delta=f'包含税 {hosting_fee_ratio_plus_tax:.2f}')
 col2.metric(label="__矿机收益/天($)__", value=f"{machine_revenue_per_day_usd:.3f}")
-col3.metric(label="__矿机电费/天($)__", value=f"{hosting_fee_per_day:.3f}")
+col3.metric(label="__矿机电费/天($)__", value=f"{hosting_fee_per_day:.3f}", delta=f'包含税 {hosting_fee_per_day_plus_tax:.3f}')
 
 # Break-even hosting price calculation
 chgs = (-0.2, -0.1, 0, 0.1, 0.2)
 chgs_str = [f'({v:.0%})'if v != 0 else '' for v in chgs]
 list_revenue_per_day_usd = [revenue_per_day_usd * (1+f) for f in chgs]
 list_breakeven_hosting_unit_price = [rev * hash_rate / power_consumption_per_day if power_consumption_per_day!=0 else 0 for rev in list_revenue_per_day_usd]
+list_breakeven_hosting_unit_price_plus_tax = [(rev * hash_rate - mining_tax_per_day) / power_consumption_per_day if power_consumption_per_day!=0 else 0 for rev in list_revenue_per_day_usd]
 
 st.markdown('---')
 st.subheader('关机电价')
@@ -103,6 +119,7 @@ st.markdown('\n')
 col1 = [f"{v * fx_usd_rmb:.3f} {suffix}"for v, suffix in zip(list_revenue_per_day_usd,chgs_str)]
 col2 = [f"{v:.3f} {suffix}"for v, suffix in zip(list_revenue_per_day_usd,chgs_str)]
 col3 = [f"{v:.3f}" for v in list_breakeven_hosting_unit_price]
-df = pd.DataFrame([col1, col2, col3], index=['每T收益(RMB)','每T收益($)','关机电价($)']).T
+col4 = [f"{v:.3f}" for v in list_breakeven_hosting_unit_price_plus_tax]
+df = pd.DataFrame([col1, col2, col3, col4], index=['每T收益(RMB)','每T收益($)','关机电价($)', '关机电价+税($)']).T
 
 st.dataframe(df, use_container_width=True, hide_index=True)
