@@ -1,5 +1,4 @@
 import requests
-import benedict
 
 def fetch_json_data(url):
     """
