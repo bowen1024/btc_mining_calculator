@@ -1,4 +1,5 @@
 import requests
+import benedict
 
 def fetch_json_data(url):
     """
@@ -39,7 +40,7 @@ def get_avg_block_fee_24h():
 
 def get_block_difficulty():
     try:
-        return fetch_json_data('https://mempool.space/api/v1/mining/difficulty-adjustments/1m')[-1][2] / 1E12
+        return fetch_json_data('https://mempool.space/api/v1/mining/difficulty-adjustments/1m')[0][2] / 1E12
     except:
         return 90.
 
